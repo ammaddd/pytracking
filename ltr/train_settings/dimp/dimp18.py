@@ -1,3 +1,4 @@
+from comet_ml import Experiment
 import torch.nn as nn
 import torch.optim as optim
 from ltr.dataset import Lasot, Got10k, TrackingNet, MSCOCOSeq
@@ -8,9 +9,13 @@ from ltr import actors
 from ltr.trainers import LTRTrainer
 import ltr.data.transforms as tfm
 from ltr import MultiGPU
+from pandas.io.json._normalize import nested_to_record
 
 
 def run(settings):
+    experiment = Experiment(auto_metric_logging=False)
+    experiment.add_tag('dimp18')
+
     settings.description = 'Default train settings for DiMP with ResNet18 as backbone.'
     settings.batch_size = 26
     settings.num_workers = 8
@@ -27,6 +32,10 @@ def run(settings):
     settings.scale_jitter_factor = {'train': 0.25, 'test': 0.5}
     settings.hinge_threshold = 0.05
     # settings.print_stats = ['Loss/total', 'Loss/iou', 'ClfTrain/init_loss', 'ClfTrain/test_loss']
+
+    settings_dict = nested_to_record(vars(settings), sep='_')
+    experiment.log_others(settings_dict)
+    experiment.log_code("./trainers/ltr_trainer.py")
 
     # Train datasets
     lasot_train = Lasot(settings.env.lasot_dir, split='train')
@@ -113,6 +122,7 @@ def run(settings):
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.2)
 
-    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler)
+    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler,
+                         experiment=experiment)
 
     trainer.train(50, load_latest=True, fail_safe=True)

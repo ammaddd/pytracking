@@ -1,3 +1,4 @@
+from comet_ml import Experiment
 import torch.nn as nn
 import torch.optim as optim
 from ltr.dataset import Lasot, TrackingNet, MSCOCOSeq, Got10k
@@ -6,9 +7,13 @@ import ltr.models.bbreg.atom as atom_models
 from ltr import actors
 from ltr.trainers import LTRTrainer
 import ltr.data.transforms as tfm
+from pandas.io.json._normalize import nested_to_record
 
 
 def run(settings):
+    experiment = Experiment(auto_metric_logging=False)
+    experiment.add_tag('atom')
+
     # Most common settings are assigned in the settings struct
     settings.description = 'ATOM IoUNet with default settings, but additionally using GOT10k for training.'
     settings.batch_size = 64
@@ -21,6 +26,10 @@ def run(settings):
     settings.output_sz = settings.feature_sz * 16
     settings.center_jitter_factor = {'train': 0, 'test': 4.5}
     settings.scale_jitter_factor = {'train': 0, 'test': 0.5}
+
+    settings_dict = nested_to_record(vars(settings), sep='_')
+    experiment.log_others(settings_dict)
+    experiment.log_code("./trainers/ltr_trainer.py")
 
     # Train datasets
     lasot_train = Lasot(settings.env.lasot_dir, split='train')
@@ -89,7 +98,8 @@ def run(settings):
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.2)
 
     # Create trainer
-    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler)
+    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler,
+                         experiment=experiment)
 
     # Run training (set fail_safe=False if you are debugging)
     trainer.train(50, load_latest=True, fail_safe=True)
