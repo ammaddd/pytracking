@@ -28,7 +28,6 @@ def run(settings):
     settings.center_jitter_factor = {'train': 3, 'test': 4.5}
     settings.scale_jitter_factor = {'train': 0.25, 'test': 0.5}
     settings.hinge_threshold = 0.05
-    settings.comet = 0.05
     # settings.print_stats = ['Loss/total', 'Loss/iou', 'ClfTrain/init_loss', 'ClfTrain/test_loss']
 
     comet_logger = CometLogger(settings.comet, auto_metric_logging=False)
