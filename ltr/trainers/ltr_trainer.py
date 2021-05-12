@@ -9,7 +9,7 @@ import time
 
 class LTRTrainer(BaseTrainer):
     def __init__(self, actor, loaders, optimizer, settings, lr_scheduler=None,
-                 experiment=None):
+                 comet_logger=None):
         """
         args:
             actor - The actor for training the network
@@ -27,7 +27,7 @@ class LTRTrainer(BaseTrainer):
         self.stats = OrderedDict({loader.name: None for loader in self.loaders})
 
         # Initialize Comet
-        self._experiment = experiment
+        self._comet_logger = comet_logger
 
         # Initialize tensorboard
         tensorboard_writer_dir = os.path.join(self.settings.env.tensorboard_dir, self.settings.project_path)
@@ -68,10 +68,10 @@ class LTRTrainer(BaseTrainer):
             loss, stats = self.actor(data)
 
             for s in stats.keys():
-                self._experiment.log_metric("{}_{}".format(type_,s),
-                                            stats[s],
-                                            step=global_step,
-                                            epoch=self.epoch)
+                self._comet_logger.log_metric("{}_{}".format(type_,s),
+                                              stats[s],
+                                              step=global_step,
+                                              epoch=self.epoch)
 
             # backward pass and update weights
             if loader.training:
